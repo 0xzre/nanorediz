@@ -1,0 +1,232 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  GO_VERSION: 1.20
+  DOCKER_IMAGE: nanorediz
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: make test
+
+    - name: Run tests with coverage
+      run: make test-coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install golangci-lint
+      run: make install-tools
+
+    - name: Run linter
+      run: make lint
+
+    - name: Check formatting
+      run: |
+        make fmt
+        git diff --exit-code
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Build all binaries
+      run: make build
+
+    - name: Upload server binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: nanorediz-server
+        path: bin/nanorediz-server
+
+    - name: Upload client binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: nanorediz-client
+        path: bin/nanorediz-client
+
+    - name: Upload web binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: nanorediz-web
+        path: bin/nanorediz-web
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Docker Hub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKER_IMAGE }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download server binary
+      uses: actions/download-artifact@v3
+      with:
+        name: nanorediz-server
+        path: bin/
+
+    - name: Download client binary
+      uses: actions/download-artifact@v3
+      with:
+        name: nanorediz-client
+        path: bin/
+
+    - name: Make binaries executable
+      run: chmod +x bin/*
+
+    - name: Start test cluster
+      run: |
+        ./bin/nanorediz-server -host 127.0.0.1 -port 8080 &
+        sleep 2
+        ./bin/nanorediz-server -host 127.0.0.1 -port 8081 -contact-host 127.0.0.1 -contact-port 8080 &
+        sleep 2
+
+    - name: Test cluster connectivity
+      run: |
+        echo "ping" | timeout 10 ./bin/nanorediz-client -host 127.0.0.1 -port 8080
+        echo "ping" | timeout 10 ./bin/nanorediz-client -host 127.0.0.1 -port 8081
+
+    - name: Test basic operations
+      run: |
+        echo -e "set test_key test_value\nget test_key\nquit" | timeout 10 ./bin/nanorediz-client -host 127.0.0.1 -port 8080
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run Gosec Security Scanner
+      uses: securego/gosec@master
+      with:
+        args: '-no-fail -fmt sarif -out results.sarif ./...'
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: results.sarif
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    needs: [test, lint, build, integration-test]
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Build release binaries
+      run: |
+        make build
+        tar -czf nanorediz-linux-amd64.tar.gz -C bin .
+
+    - name: Upload release assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./nanorediz-linux-amd64.tar.gz
+        asset_name: nanorediz-linux-amd64.tar.gz
+        asset_content_type: application/gzip

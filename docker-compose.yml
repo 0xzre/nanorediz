@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  nanorediz-node-1:
+    build: .
+    container_name: nanorediz-node-1
+    ports:
+      - "8080:8080"
+    environment:
+      - NANOREDIZ_HOST=0.0.0.0
+      - NANOREDIZ_PORT=8080
+      - NANOREDIZ_LOG_LEVEL=info
+    command: ["./bin/nanorediz-server", "-host", "0.0.0.0", "-port", "8080"]
+    networks:
+      - nanorediz-network
+    healthcheck:
+      test: ["CMD", "./bin/nanorediz-client", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nanorediz-node-2:
+    build: .
+    container_name: nanorediz-node-2
+    ports:
+      - "8081:8080"
+    environment:
+      - NANOREDIZ_HOST=0.0.0.0
+      - NANOREDIZ_PORT=8080
+      - NANOREDIZ_LOG_LEVEL=info
+    command: ["./bin/nanorediz-server", "-host", "0.0.0.0", "-port", "8080", "-contact-host", "nanorediz-node-1", "-contact-port", "8080"]
+    depends_on:
+      - nanorediz-node-1
+    networks:
+      - nanorediz-network
+    healthcheck:
+      test: ["CMD", "./bin/nanorediz-client", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nanorediz-node-3:
+    build: .
+    container_name: nanorediz-node-3
+    ports:
+      - "8082:8080"
+    environment:
+      - NANOREDIZ_HOST=0.0.0.0
+      - NANOREDIZ_PORT=8080
+      - NANOREDIZ_LOG_LEVEL=info
+    command: ["./bin/nanorediz-server", "-host", "0.0.0.0", "-port", "8080", "-contact-host", "nanorediz-node-1", "-contact-port", "8080"]
+    depends_on:
+      - nanorediz-node-1
+    networks:
+      - nanorediz-network
+    healthcheck:
+      test: ["CMD", "./bin/nanorediz-client", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  nanorediz-network:
+    driver: bridge

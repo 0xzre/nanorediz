@@ -15,15 +15,13 @@ import (
 	"github.com/Sister20/if3230-tubes-dark-syster/lib/pb"
 )
 
-//var address _struct.Address
-
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: go run client.go <server ip> <server port> <time?>")
+		fmt.Println("Usage: go run main.go <server ip> <server port> <time?>")
 		return
 	} else {
 		if os.Args[2] == "time" {
-			fmt.Println("Usage: go run client.go <server ip> <server port> <time?>")
+			fmt.Println("Usage: go run main.go <server ip> <server port> <time?>")
 			return
 		}
 	}
@@ -70,7 +68,7 @@ func main() {
 					client.SetAddress(&address)
 					response, err := client.Services.KV.Ping(ctx, &pb.Empty{})
 					if err != nil {
-						fmt.Println("Response Error %v", err)
+						fmt.Printf("Response Error %v", err)
 					}
 					return response
 				}
@@ -92,20 +90,12 @@ func main() {
 
 			ctx := context.Background()
 
-			// function := func() {
-			// 	response, err := client.Services.KV.Get(ctx, &pb.KeyRequest{Key: command[1]})
-			// 	if err != nil {
-			// 		log.Fatalf("Response Error %v", err)
-			// 	}
-			// 	fmt.Printf("\"%s\"\n", response.GetValue())
-			// }
-
 			function := func() {
 				handler := func(address Address) *pb.Response {
 					client.SetAddress(&address)
 					response, err := client.Services.KV.Get(ctx, &pb.KeyRequest{Key: command[1]})
 					if err != nil {
-						fmt.Println("Response Error %v", err)
+						fmt.Printf("Response Error %v", err)
 					}
 					return response
 				}
@@ -127,19 +117,12 @@ func main() {
 
 			ctx := context.Background()
 
-			// function := func() {
-			// 	response, err := client.Services.KV.Set(ctx, &pb.KeyValueRequest{Key: command[1], Value: command[2]})
-			// 	if err != nil {
-			// 		log.Fatalf("Response Error %v", err)
-			// 	}
-			// 	fmt.Printf("\"%s\"\n", response.GetValue())
-			// }
 			function := func() {
 				handler := func(address Address) *pb.Response {
 					client.SetAddress(&address)
 					response, err := client.Services.KV.Set(ctx, &pb.KeyValueRequest{Key: command[1], Value: command[2]})
 					if err != nil {
-						fmt.Println("Response Error %v", err)
+						fmt.Printf("Response Error %v", err)
 					}
 					return response
 				}
@@ -161,20 +144,12 @@ func main() {
 
 			ctx := context.Background()
 
-			// function := func() {
-			// 	response, err := client.Services.KV.StrLn(ctx, &pb.KeyRequest{Key: command[1]})
-			// 	if err != nil {
-			// 		log.Fatalf("Response Error %v", err)
-			// 	}
-			// 	fmt.Printf("%s\n", response.GetValue())
-			// }
-
 			function := func() {
 				handler := func(address Address) *pb.Response {
 					client.SetAddress(&address)
 					response, err := client.Services.KV.StrLn(ctx, &pb.KeyRequest{Key: command[1]})
 					if err != nil {
-						fmt.Println("Response Error %v", err)
+						fmt.Printf("Response Error %v", err)
 					}
 					return response
 				}
@@ -196,19 +171,12 @@ func main() {
 
 			ctx := context.Background()
 
-			// function := func() {
-			// 	response, err := client.Services.KV.Del(ctx, &pb.KeyRequest{Key: command[1]})
-			// 	if err != nil {
-			// 		log.Fatalf("Response Error %v", err)
-			// 	}
-			// 	fmt.Printf("\"%s\"\n", response.GetValue())
-			// }
 			function := func() {
 				handler := func(address Address) *pb.Response {
 					client.SetAddress(&address)
 					response, err := client.Services.KV.Del(ctx, &pb.KeyRequest{Key: command[1]})
 					if err != nil {
-						fmt.Println("Response Error %v", err)
+						fmt.Printf("Response Error %v", err)
 					}
 					return response
 				}
@@ -230,19 +198,12 @@ func main() {
 
 			ctx := context.Background()
 
-			// function := func() {
-			// 	response, err := client.Services.KV.Append(ctx, &pb.KeyValueRequest{Key: command[1], Value: command[2]})
-			// 	if err != nil {
-			// 		log.Fatalf("Response Error %v", err)
-			// 	}
-			// 	fmt.Printf("\"%s\"\n", response.GetValue())
-			// }
 			function := func() {
 				handler := func(address Address) *pb.Response {
 					client.SetAddress(&address)
 					response, err := client.Services.KV.Append(ctx, &pb.KeyValueRequest{Key: command[1], Value: command[2]})
 					if err != nil {
-						fmt.Println("Response Error %v", err)
+						fmt.Printf("Response Error %v", err)
 					}
 					return response
 				}
