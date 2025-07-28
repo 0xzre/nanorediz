@@ -20,7 +20,7 @@ COPY . .
 RUN make build
 
 # Runtime stage
-FROM alpine:latest
+FROM alpine:3.18
 
 # Install ca-certificates for HTTPS
 RUN apk --no-cache add ca-certificates
