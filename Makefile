@@ -70,7 +70,7 @@ lint:
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run; \
 	else \
-		echo "golangci-lint not installed. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
+		echo "golangci-lint not installed. Install with: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest"; \
 	fi
 
 ## Format code
@@ -96,7 +96,7 @@ stop-cluster:
 ## Install development tools
 install-tools:
 	@echo "Installing development tools..."
-	$(GOCMD) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	$(GOCMD) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
 ## Generate protobuf files
 proto:
